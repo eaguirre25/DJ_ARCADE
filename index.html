@@ -113,7 +113,7 @@ select{max-width:100%}
       </select>
     </label>
     <label><input type="checkbox" id="shuf"> Mezclar videos al iniciar</label>
-    <label>BPM <input type="text" id="bpm" value="124" style="min-width:0;width:70px;flex:none"></label>
+    <label>BPM de baile <input type="text" id="bpm" value="124" style="min-width:0;width:70px;flex:none"></label>
   </div>
 </div>
 
@@ -135,7 +135,7 @@ select{max-width:100%}
 <div class="panel">
   <h3>🎧 Elegí tu DJ (32 personajes)</h3>
   <div class="duos" id="duos"></div>
-  <p class="note">Los retratos salen de personajes.png (tiene que estar junto al index.html). Las frases entre comillas son inventadas, de tono paródico; no son citas reales. Tocá el retrato de la izquierda en la cabina para intercambiar quién pincha. La playlist se guarda en tu navegador. YouTube puede bloquear algunos videos incrustados; en ese caso se salta al siguiente. Los cambios de DJ no reinician el reproductor.</p>
+  <p class="note">Los DJs ahora cabecean, se balancean y mueven los brazos al reproducirse YouTube; se quedan quietos cuando el video está pausado. El BPM regula la velocidad de la animación (no detecta automáticamente el ritmo real del audio). Los retratos salen de personajes.png (tiene que estar junto al index.html). Las frases entre comillas son inventadas, de tono paródico; no son citas reales. Tocá el retrato de la izquierda en la cabina para intercambiar quién pincha. La playlist se guarda en tu navegador. YouTube puede bloquear algunos videos incrustados; en ese caso se salta al siguiente. Los cambios de DJ no reinician el reproductor.</p>
 </div>
 
 </div>
@@ -257,8 +257,11 @@ function portrait(d,x,y,w,h,pulse){
  g.restore();
 }
 function mainDJ(d,beat,ph,pulse){
- const bob=ph<.5?0:1,sway=Math.sin(beat*Math.PI/2)*.045;
- const k=1+.05*pulse,w=48*k,h=46*k,cx=82,cy=41+bob;
+ // La animación se activa únicamente cuando YouTube está reproduciendo.
+ const active=musicPlaying;
+ const bob=active?Math.round(Math.sin(beat*Math.PI*2)*2):0;
+ const sway=active?Math.sin(beat*Math.PI)*.105:0;
+ const k=1+(active?.065*pulse:0),w=48*k,h=46*k,cx=82,cy=41+bob;
  g.save();g.translate(cx,62);g.rotate(sway);g.translate(-cx,-62);
  const x=cx-w/2,y=cy-h/2;
  g.globalAlpha=.35;R(x-3,y-3,Math.round(w)+6,Math.round(h)+6,'#ff3dc8');g.globalAlpha=1;
@@ -266,12 +269,21 @@ function mainDJ(d,beat,ph,pulse){
  R(x-1,y-1,Math.round(w)+2,Math.round(h)+2,'#19d3ff');
  g.fillStyle='#0c0326';g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));
  spriteTo(g,d,x,y,w,h);
- if(pulse>.6)[[x-4,y-4],[x+w+2,y-4],[x-4,y+h-8],[x+w+2,y+h-8]].forEach(([a,b])=>{R(a,b+1,3,1,'#ffe45e');R(a+1,b,1,3,'#ffe45e')});
+ // Brazos pixelados: uno hace scratch y el otro marca el ritmo.
+ if(active){
+  const leftHand=Math.round(2*Math.sin(beat*Math.PI*2));
+  const rightHand=Math.round(3*Math.sin(beat*Math.PI+1.1));
+  R(x+2,y+h-13+leftHand,9,4,'#f5bc92');
+  R(x+w-11,y+h-14+rightHand,9,4,'#f5bc92');
+  R(x+3,y+h-10+leftHand,4,4,'#ffe45e');
+  R(x+w-7,y+h-11+rightHand,4,4,'#19d3ff');
+ }
+ if(active&&pulse>.6)[[x-4,y-4],[x+w+2,y-4],[x-4,y+h-8],[x+w+2,y+h-8]].forEach(([a,b])=>{R(a,b+1,3,1,'#ffe45e');R(a+1,b,1,3,'#ffe45e')});
  g.restore();
 }
 
 /* ============ ESTADO ============ */
-let cur=0,flip=0,bpm=124;
+let cur=0,flip=0,bpm=124,musicPlaying=false,musicClock=0,musicClockAt=performance.now();
 const dj=()=>DUOS[cur][flip],partner=()=>DUOS[cur][1-flip],nextDJ=()=>DUOS[(cur+1)%DUOS.length][0];
 let glitchUntil=0;
 
@@ -350,18 +362,21 @@ let lastF=0,T0=performance.now();
 function draw(now){
  requestAnimationFrame(draw);
  if(now-lastF<33)return;lastF=now;
- const t=(now-T0)/1000,beat=t*bpm/60,ph=beat%1,pulse=Math.max(0,1-ph*3.5);
+ const t=(now-T0)/1000;
+ if(musicPlaying){musicClock+=(now-musicClockAt)/1000;}
+ musicClockAt=now;
+ const beat=musicClock*bpm/60,ph=beat%1,pulse=musicPlaying?Math.max(0,1-ph*3.5):0;
  C=g;
  g.drawImage(bgBack,0,0);
  floor(t,pulse);
  g.drawImage(bgFront,0,0);
  eqBars(t,pulse);
  // portada izq.: compañero/a
- portrait(partner(),3,22,22,26,pulse);
+ portrait(partner(),3+(musicPlaying?Math.round(Math.sin(beat*Math.PI)*1):0),22+(musicPlaying?Math.round(Math.cos(beat*Math.PI*2)):0),22,26,pulse);
  arcade(t,pulse);
  disco(t);
  // NEXT
- portrait(nextDJ(),137,92,24,30,pulse);
+ portrait(nextDJ(),137,92,24,30,0);
  // DJ principal
  beams(t,pulse);
  mainDJ(dj(),beat,ph,pulse);
@@ -458,12 +473,13 @@ window.onYouTubeIframeAPIReady=()=>{
 };
 function setNP(t){$('npT').textContent='NOW PLAYING ▶ '+t}
 function onState(e){
+ musicPlaying=e.data===YT.PlayerState.PLAYING;
  if(e.data===YT.PlayerState.PLAYING){errs=0;try{const t=player.getVideoData().title;if(t){setNP(t);if(vids[idx])vids[idx].title=t;renderList()}}catch(_){}}
  if(e.data===YT.PlayerState.ENDED)nextVideo();
 }
 const ERR={2:'enlace inválido',5:'error del reproductor HTML5',100:'video no encontrado o privado',101:'el dueño no permite incrustarlo',150:'el dueño no permite incrustarlo',153:'falta referer (abrilo desde https://, no desde un archivo)'};
 let wd=null;
-function onErr(e){errs++;const c=e&&e.data,m=ERR[c]||('código '+c);
+function onErr(e){musicPlaying=false;errs++;const c=e&&e.data,m=ERR[c]||('código '+c);
  if(errs>=vids.length){setNP('No se pudo reproducir ningún video ('+m+')');return}
  setNP('Salteado: '+m);setTimeout(nextVideo,1500)}
 function watchdog(){clearTimeout(wd);wd=setTimeout(()=>{try{const st=player.getPlayerState();if(st!==1&&st!==3){setNP('Tocá ▶ en el video para iniciar (el navegador bloqueó el autoplay)');player.playVideo()}}catch(_){}},4000)}
