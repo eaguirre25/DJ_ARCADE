@@ -1,1 +1,491 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#180a38"><meta name="description" content="ARCADE DJ 90s: cabina pixel art con videos de YouTube y DJs animados."><title>ARCADE DJ 90s · Party Mode</title><link rel="stylesheet" href="styles.css"></head><body><main class="app"><section class="cabinet" id="cabinet" aria-label="Escenario arcade DJ"><header><h1 class="marquee pixel">★ ARCADE DJ 90s ★</h1><div class="status-line"><span id="dj-count">DJ 1/16</span><span id="track-count">INSERT COIN</span><span class="led">● PARTY MODE</span></div><p class="stage-footer pixel" id="ticker">PROLETARIOS DEL BEAT · UNÍOS</p></header><div class="scene"><div class="character left"><canvas class="portrait" id="sprite1" width="64" height="64" role="img" aria-label="Retrato pixel art del DJ izquierdo"></canvas><span class="dj-label" id="name1">KARL MARX</span></div><div class="video-shell"><div id="player"><div class="video-empty"><strong class="pixel">▶ VIDEO<br>YOUTUBE</strong></div></div></div><div class="character right"><canvas class="portrait" id="sprite2" width="64" height="64" role="img" aria-label="Retrato pixel art del DJ derecho"></canvas><span class="dj-label" id="name2">FRIEDRICH ENGELS</span></div></div><div class="console" aria-hidden="true"><div class="record"></div><div class="equalizer"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="record"></div></div><div class="grid-floor" aria-hidden="true"></div><div class="challenger" id="challenger"><h2>NEW CHALLENGER!<br><span id="incoming"></span></h2></div><div class="start-screen" id="start-screen"><div><h2 class="pixel">READY PLAYER ONE?</h2><button id="start" type="button">▶ START PARTY</button><p>Primero cargá una playlist abajo. Después tocá START para activar la música.</p></div></div></section><section class="panel" id="settings"><h2 class="pixel">🎮 CONTROL DE CABINA</h2><div class="buttons"><button id="start-again">▶ INICIAR PLAYLIST</button><button id="next-video">⏭ SIGUIENTE VIDEO</button><button id="next-dj">🕺 SIGUIENTE DJ</button><button id="random-dj">🎲 DJ ALEATORIO</button><button id="fullscreen">⛶ PANTALLA COMPLETA</button></div><div class="settings"><label>Rotación de DJs<select id="minutes"><option value="10">Cada 10 minutos</option><option value="5">Cada 5 minutos</option><option value="1">Cada 1 minuto (prueba)</option><option value=".5">Cada 30 segundos (prueba)</option></select></label><label class="check"><input type="checkbox" id="shuffle"> Mezclar videos al iniciar</label><div><button id="save">💾 GUARDAR AJUSTES</button></div><div class="wide"><label for="new-link">Agregar un video de YouTube</label><div class="row"><input id="new-link" style="flex:1;min-width:190px;background:#08061c;color:white;border:1px solid #8769ba;padding:12px" placeholder="Pegá el enlace de YouTube"><button id="add-link" type="button">＋ AGREGAR VIDEO</button></div><p class="muted">Agregá videos de a uno, cambiá el orden o eliminá los que no quieras.</p><ol id="video-list" class="video-list"></ol><p id="playlist-total" class="muted">0 videos en la lista</p><div class="buttons"><button id="clear-list" type="button">🗑 VACIAR LISTA</button></div><label class="muted" for="playlist">Edición masiva opcional (una URL o ID por línea)</label><textarea id="playlist" placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX&#10;https://youtu.be/YYYYYYYYYYY"></textarea></div></div><p class="hint" role="status" id="status">Cargá enlaces de YouTube y presioná START PARTY. Los videos siguen su secuencia independientemente de los cambios de DJ.</p><h3>🎧 Elegí un dúo para la cabina</h3><div class="dj-list" id="dj-list"></div><p class="muted">Los retratos son sprites pixel art generados por código, de estilo caricaturesco y aproximado; todavía no son ilustraciones personalizadas de cada personaje. Las frases son parodias ficticias. La playlist se guarda localmente en tu navegador, no en GitHub. YouTube puede bloquear videos incrustados o exigir interacción para reproducir sonido. Los cambios de DJ no reinician el reproductor.</p></section></main><script src="app.js"></script><script src="https://www.youtube.com/iframe_api" async></script></body></html>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#180a38">
+<meta name="description" content="ARCADE DJ 90s: cabina synthwave en pixel art con videos de YouTube y DJs animados.">
+<title>ARCADE DJ 90s · Party Mode</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;background:#080216;color:#e9ddff;font-family:'VT323',monospace;font-size:20px}
+body{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:10px 10px 40px}
+.wrap{width:min(100%,920px)}
+.poster{position:relative;width:100%;aspect-ratio:1312/1199;container-type:inline-size;background:#10033a;overflow:hidden;border-radius:6px;box-shadow:0 0 40px #ff3dc866,0 0 90px #19d3ff33}
+.poster:fullscreen{width:min(100vw,calc(100vh * 1.094));height:auto;margin:auto;border-radius:0}
+#stage{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges}
+.poster::after{content:"";position:absolute;inset:0;pointer-events:none;z-index:9;
+ background:repeating-linear-gradient(to bottom,rgba(0,0,0,.18) 0 1px,transparent 1px 3px);mix-blend-mode:multiply;
+ box-shadow:inset 0 0 12cqw rgba(0,0,0,.55)}
+#title{position:absolute;left:20%;width:60%;top:.6%;height:9.5%;display:flex;align-items:center;justify-content:center;z-index:3;pointer-events:none}
+#title span{font-family:'Press Start 2P',monospace;font-style:italic;font-size:6.2cqw;transform:skewX(-8deg);letter-spacing:.3cqw;
+ background:linear-gradient(#ffe45e 0 45%,#ff3d9a 55% 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+ filter:drop-shadow(.3cqw .3cqw 0 #3a0a8a) drop-shadow(0 0 1cqw #ff3dc8aa)}
+#plate{position:absolute;left:19%;top:12.6%;width:22%;z-index:3;font-family:'Press Start 2P',monospace;pointer-events:none;text-shadow:0 0 .8cqw #19d3ff}
+#plate b{display:block;font-size:1.35cqw;color:#ffe45e;line-height:1.5}
+#plate i{display:block;font-style:normal;font-size:1cqw;color:#9ff;line-height:1.6;margin-top:.4cqw}
+#np{position:absolute;left:75.4%;top:15%;width:21.6%;height:5.1%;z-index:3;display:flex;align-items:center;overflow:hidden;padding:0 1.2cqw;
+ font-family:'Press Start 2P',monospace;font-size:1.25cqw;color:#ffe45e;background:#13084a;border:.3cqw solid #ff3dc8;border-radius:1cqw;box-shadow:0 0 1.2cqw #ff3dc8}
+#np span{white-space:nowrap;display:inline-block;padding-left:100%;animation:mq 14s linear infinite}
+@keyframes mq{to{transform:translateX(-100%)}}
+#nextlbl{position:absolute;left:83.2%;top:55.6%;z-index:3;font-family:'Press Start 2P',monospace;font-size:1.5cqw;color:#ffe45e;text-shadow:0 0 1cqw #ff3dc8;pointer-events:none}
+#nextnm{position:absolute;left:82.5%;width:16%;top:81.6%;z-index:3;text-align:center;font-family:'Press Start 2P',monospace;font-size:.95cqw;color:#9ff;pointer-events:none}
+#screen{position:absolute;left:19.5%;top:46.7%;width:61%;height:39.3%;z-index:2;background:#000}
+#screen iframe,#player{width:100%;height:100%;border:0;display:block}
+#start{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.6cqw;text-align:center;
+ background:radial-gradient(#2b0f6a,#0a0322);font-family:'Press Start 2P',monospace;padding:1cqw}
+#start h3{margin:0;font-size:2.4cqw;color:#ffe45e;text-shadow:0 0 1cqw #ff3dc8;animation:bl 1s steps(2) infinite}
+#start p{margin:0;font-size:1.1cqw;color:#9ff;line-height:1.8;max-width:90%}
+@keyframes bl{50%{opacity:.35}}
+.btn{font-family:'Press Start 2P',monospace;font-size:11px;color:#1a0840;background:linear-gradient(#ffe45e,#ff9a3d);border:0;border-radius:6px;padding:11px 14px;cursor:pointer;
+ box-shadow:0 4px 0 #8a3a00,0 0 14px #ff9a3d88;transition:transform .08s}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #8a3a00}
+.btn.cy{background:linear-gradient(#7af0ff,#19a3ff);box-shadow:0 4px 0 #0a4a8a,0 0 14px #19d3ff88}
+.btn.pk{background:linear-gradient(#ff9ad5,#ff3d9a);box-shadow:0 4px 0 #8a0a50,0 0 14px #ff3d9a88}
+.btn.sm{font-size:9px;padding:7px 9px}
+#start .btn{font-size:1.5cqw;padding:1.4cqw 2.4cqw}
+#chal{position:absolute;inset:0;z-index:8;display:none;align-items:center;justify-content:center;flex-direction:column;gap:2cqw;background:rgba(10,2,40,.78);
+ font-family:'Press Start 2P',monospace;text-align:center;pointer-events:none}
+#chal.on{display:flex;animation:gl .18s steps(2) 8}
+#chal h2{margin:0;font-size:5cqw;color:#ff3d9a;text-shadow:.4cqw 0 #19d3ff,-.4cqw 0 #ffe45e;letter-spacing:.2cqw}
+#chal p{margin:0;font-size:2.2cqw;color:#ffe45e}
+@keyframes gl{0%{transform:translate(0,0)}33%{transform:translate(-1.2cqw,.4cqw) skewX(3deg)}66%{transform:translate(1.2cqw,-.4cqw) skewX(-3deg)}100%{transform:translate(0,0)}}
+.panel{margin-top:16px;padding:14px;border:2px solid #ff3dc8;border-radius:10px;background:#12063a;box-shadow:0 0 18px #ff3dc844}
+.panel h2,.panel h3{font-family:'Press Start 2P',monospace;font-size:12px;color:#ffe45e;margin:0 0 12px;line-height:1.6}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+input[type=text],select,textarea{font:inherit;color:#e9ddff;background:#0a0322;border:2px solid #19d3ff;border-radius:6px;padding:8px 10px}
+input[type=text]{flex:1;min-width:200px}
+textarea{width:100%;min-height:70px}
+label{display:flex;gap:6px;align-items:center;flex-wrap:wrap;max-width:100%}
+select{max-width:100%}
+#list{list-style:none;margin:10px 0 0;padding:0;max-height:240px;overflow:auto}
+#list li{display:flex;gap:6px;align-items:center;padding:5px 6px;border-bottom:1px dashed #3a1a8a}
+#list li.cur{background:#2a0f6a;border-radius:6px}
+#list .t{flex:1;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#list button{background:#2a0f6a;color:#9ff;border:1px solid #19d3ff;border-radius:4px;cursor:pointer;font-family:inherit;font-size:16px;padding:0 7px}
+.duos{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.duo{cursor:pointer;background:#0a0322;border:2px solid #3a1a8a;border-radius:8px;padding:6px;text-align:center;font-size:17px;line-height:1.1}
+.duo.on{border-color:#ffe45e;box-shadow:0 0 12px #ffe45e88}
+.duo canvas{width:100%;image-rendering:pixelated;display:block;margin-bottom:4px}
+.note{font-size:17px;color:#b9a8e8;line-height:1.2;margin-top:10px}
+@media (prefers-reduced-motion:reduce){#np span,#start h3{animation:none}#chal.on{animation:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<div class="poster" id="poster">
+  <canvas id="stage" aria-label="Cabina de DJ arcade en pixel art"></canvas>
+  <div id="title"><span>ARCADE DJ</span></div>
+  <div id="plate"><b id="plN"></b><i id="plQ"></i></div>
+  <div id="np"><span id="npT">NOW PLAYING ▶ ...</span></div>
+  <div id="nextlbl">NEXT ▶</div>
+  <div id="nextnm"></div>
+  <div id="screen">
+    <div id="player"></div>
+    <div id="start">
+      <h3>READY PLAYER ONE?</h3>
+      <p id="startMsg">Cargá una playlist abajo y después tocá START para activar la música.</p>
+      <button class="btn" id="btnStart">▶ START PARTY</button>
+    </div>
+  </div>
+  <div id="chal"><h2>NEW CHALLENGER!</h2><p id="chalN"></p></div>
+</div>
+
+<div class="panel">
+  <h2>🎮 CONTROL DE CABINA</h2>
+  <div class="row">
+    <button class="btn" id="bPlay">▶ INICIAR</button>
+    <button class="btn cy" id="bNextV">⏭ SIGUIENTE VIDEO</button>
+    <button class="btn pk" id="bNextD">🕺 SIGUIENTE DJ</button>
+    <button class="btn pk" id="bRnd">🎲 DJ ALEATORIO</button>
+    <button class="btn cy" id="bFull">⛶ PANTALLA COMPLETA</button>
+  </div>
+  <div class="row">
+    <label>Rotación de DJs
+      <select id="rot">
+        <option value="600000">Cada 10 minutos</option>
+        <option value="300000">Cada 5 minutos</option>
+        <option value="60000">Cada 1 minuto (prueba)</option>
+        <option value="30000">Cada 30 segundos (prueba)</option>
+      </select>
+    </label>
+    <label><input type="checkbox" id="shuf"> Mezclar videos al iniciar</label>
+    <label>BPM <input type="text" id="bpm" value="124" style="min-width:0;width:70px;flex:none"></label>
+  </div>
+</div>
+
+<div class="panel">
+  <h3>Agregar un video de YouTube</h3>
+  <div class="row">
+    <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=... o ID de 11 caracteres">
+    <button class="btn sm" id="bAdd">＋ AGREGAR</button>
+    <button class="btn sm pk" id="bClear">🗑 VACIAR</button>
+  </div>
+  <div id="count" class="note" style="margin:0">0 videos en la lista</div>
+  <ul id="list"></ul>
+  <details style="margin-top:10px"><summary>Edición masiva (una URL o ID por línea)</summary>
+    <textarea id="bulk" placeholder="Pegá varios enlaces"></textarea>
+    <button class="btn sm cy" id="bBulk" style="margin-top:6px">CARGAR LISTA</button>
+  </details>
+</div>
+
+<div class="panel">
+  <h3>🎧 Elegí tu DJ (32 personajes)</h3>
+  <div class="duos" id="duos"></div>
+  <p class="note">Los retratos salen de personajes.png (tiene que estar junto al index.html). Las frases entre comillas son inventadas, de tono paródico; no son citas reales. Tocá el retrato de la izquierda en la cabina para intercambiar quién pincha. La playlist se guarda en tu navegador. YouTube puede bloquear algunos videos incrustados; en ese caso se salta al siguiente. Los cambios de DJ no reinician el reproductor.</p>
+</div>
+
+</div>
+
+<script>
+/* ============ DATOS: personajes de la hoja personajes.png ============ */
+const SHEET=new Image();let sheetOK=false;
+SHEET.onload=()=>{sheetOK=true;buildThumbs()};SHEET.src='personajes.png';
+// marcos de cada retrato dentro de la hoja (8 columnas x 4 filas)
+const SL=[20,219,411,597,782,972,1160,1346],SR=[207,400,585,770,960,1149,1334,1517],ST=[89,307,518,729],SB=[266,473,684,929];
+const NAMES=['KARL MARX','FRIEDRICH ENGELS','CRISTINA','LULA','MENEM','CAVALLO','MILEI','KARINA',
+ 'PERÓN','EVITA','NÉSTOR','KIRCHNER','MACRI','LARRETA','ALBERTO','MASSA',
+ 'SAN MARTÍN','BELGRANO','SARMIENTO','ROCA','YRIGOYEN','ALVEAR','ARTIGAS','BOLÍVAR',
+ 'HIJITUS','PATORUZÚ','MAFALDA','QUINO','FREIRE','FOUCAULT','BOURDIEU','HARAWAY'];
+const TAGS=[
+ '“¡Proletarios del beat, uníos!”','“La dialéctica también se mezcla.”','♪ Vinilo de colección','♪ Samba, bossa y mucho bajo',
+ '“Pista lenta no es pista.”','♪ Contando los BPM','♪ Volumen al máximo','♪ Detrás de la cabina',
+ '“Del tocadiscos a la pista: todos bailan.”','“Donde hay una pista, hay baile para todos.”','“Suban el volumen, que arrancamos.”','♪ Con banda y todo',
+ '♪ Ritmo de equipo','♪ Mezcla porteña','♪ Guitarra y consola','♪ Crossfader de precisión',
+ '“¡Cruzo los Andes y no pierdo el beat!”','“Mi bandera es celeste, blanca y fluorescente.”','“Educar al pueblo: primera clase de mezcla.”','“A esta consola le falta un buen bajo.”',
+ '“Pasá, pasá, que el beat es para todos.”','“Elegancia en cada transición.”','“Con libertad se mezcla mejor.”','“Un solo beat de Caracas a Buenos Aires.”',
+ '“¡Con la galera también se mezcla!”','“¡Upa! Ahora sube el bajo.”','“Ojalá el mundo tuviera botón de volumen.”','“Dibujo notas, pero las toco mejor.”',
+ '“Nadie mezcla solo: pinchamos en comunidad.”','“Todo beat es una relación de poder.”','“El gusto musical también es capital.”','♪ Beats cíborg y compañeras'];
+const CH=NAMES.map((n,i)=>{const c=i%8,r=(i/8)|0;return{n,q:TAGS[i],sx:SL[c]+8,sy:ST[r]+8,sw:SR[c]-SL[c]-16,sh:SB[r]-ST[r]-16}});
+// dúos: personajes contiguos de la hoja (16 dúos). Reordenalos a gusto.
+const DUOS=[];for(let i=0;i<CH.length;i+=2)DUOS.push([CH[i],CH[i+1]]);
+
+/* ============ UTILIDADES DE DIBUJO ============ */
+const W=164,H=150;
+const cv=document.getElementById('stage');cv.width=W;cv.height=H;
+const g=cv.getContext('2d');let C=g;
+function R(x,y,w,h,c){C.fillStyle=c;C.fillRect(Math.round(x),Math.round(y),w,h)}
+function ln(x0,y0,x1,y1,w,c){const n=Math.max(Math.abs(x1-x0),Math.abs(y1-y0))||1;for(let i=0;i<=n;i++)R(x0+(x1-x0)*i/n,y0+(y1-y0)*i/n,w,w,c)}
+function hx(c){return[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)]}
+function mix(a,b,t){const A=hx(a),B=hx(b);return'#'+A.map((v,i)=>Math.round(v+(B[i]-v)*t).toString(16).padStart(2,'0')).join('')}
+function rng(s){return()=>{s|=0;s=s+0x6D2B79F5|0;let t=Math.imul(s^s>>>15,1|s);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function mk(){const c=document.createElement('canvas');c.width=W;c.height=H;return c}
+
+/* ============ FONDOS ESTÁTICOS ============ */
+const bgBack=mk(),bgFront=mk();
+(function(){
+ const r=rng(7);
+ C=bgBack.getContext('2d');
+ for(let y=0;y<52;y++)R(0,y,W,1,mix('#10033a','#ff3d9a',Math.pow(y/52,1.7)));
+ for(let i=0;i<30;i++)R(Math.floor(r()*W),Math.floor(r()*34),1,1,r()>.5?'#fff':'#9ff');
+ // sol
+ const sx=100,sy=38,sr=15;
+ for(let dy=-sr;dy<=sr;dy++){
+  if(dy>2&&(dy%4)<Math.floor(dy/5)+1)continue;
+  const hw=Math.floor(Math.sqrt(sr*sr-dy*dy));
+  R(sx-hw,sy+dy,hw*2,1,mix('#ffe45e','#ff3d9a',(dy+sr)/(2*sr)));
+ }
+ // skyline
+ let x=12;
+ while(x<150){
+  const w=5+Math.floor(r()*5),h=8+Math.floor(r()*16);
+  R(x,52-h,w,h,'#2b0b63');R(x,52-h,w,1,'#7a3df0');
+  for(let wy=52-h+3;wy<50;wy+=3)for(let wx=x+1;wx<x+w-1;wx+=2)if(r()>.55)R(wx,wy,1,1,r()>.5?'#ffe45e':'#19d3ff');
+  x+=w+1;
+ }
+ // frente
+ C=bgFront.getContext('2d');
+ function palm(px,base,h,d){
+  for(let i=0;i<h;i++)R(px+Math.round(Math.sin(i/9)*d*2),base-i,2,1,'#14062e');
+  const tx=px+Math.round(Math.sin(h/9)*d*2),ty=base-h;
+  [[-10,-1],[-8,-6],[-3,-9],[3,-9],[8,-6],[10,-1],[0,-10]].forEach(([dx,dy])=>ln(tx,ty,tx+dx,ty+dy+3,2,'#1a0840'));
+ }
+ palm(36,56,26,1);palm(128,56,20,-1);palm(48,56,14,-1);
+ // header
+ R(20,2,124,14,'#1b0846');
+ ln(20,2,8,14,2,'#1b0846');ln(144,2,156,14,2,'#1b0846');
+ R(12,15,140,1,'#ff3dc8');R(12,16,140,1,'#19d3ff');
+ ln(20,2,12,15,1,'#ff3dc8');ln(144,2,152,15,1,'#ff3dc8');
+ R(20,1,124,1,'#ff3dc8');
+ // notas decorativas
+ [[8,6],[18,9],[142,5],[152,8]].forEach(([nx,ny])=>{R(nx,ny,2,2,'#ffe45e');R(nx+1,ny-3,1,3,'#ffe45e');R(nx+1,ny-3,3,1,'#ffe45e')});
+ // retrato izq. marco
+ R(2,21,24,1,'#19d3ff');R(2,48,24,1,'#19d3ff');R(2,21,1,28,'#19d3ff');R(25,21,1,28,'#19d3ff');
+ R(1,20,26,1,'#ff3dc8');R(1,49,26,1,'#ff3dc8');R(1,20,1,30,'#ff3dc8');R(26,20,1,30,'#ff3dc8');
+ // gabinete
+ R(3,56,26,62,'#2b1280');R(3,56,1,62,'#ff3dc8');R(28,56,1,62,'#ff3dc8');
+ R(5,51,22,6,'#4a1fb0');R(5,51,22,1,'#ff3dc8');
+ for(let i=0;i<4;i++)R(8+i*5,53,3,2,['#ffe45e','#ff3dc8','#19d3ff','#7aff7a'][i]);
+ R(5,58,22,28,'#0a0420');R(5,58,22,1,'#19d3ff');R(5,85,22,1,'#19d3ff');R(5,58,1,28,'#19d3ff');R(26,58,1,28,'#19d3ff');
+ R(4,88,24,9,'#4a1fb0');R(4,88,24,1,'#a070ff');
+ R(10,92,1,4,'#ccc');R(8,90,5,3,'#ff3d3d');
+ R(8,100,16,16,'#1a0b55');R(8,100,16,1,'#ff3dc8');R(14,103,4,1,'#000');
+ R(3,118,26,2,'#14062e');
+ // busto
+ R(144,83,18,6,'#6a4bc4');R(144,83,18,1,'#a070ff');
+ R(146,74,14,9,'#cdbdf0');R(149,70,8,5,'#b0a0dc');
+ R(149,59,9,12,'#e1d6fa');R(148,58,11,3,'#b8a8e8');R(148,60,2,6,'#b8a8e8');R(157,60,2,6,'#b8a8e8');
+ R(150,64,7,2,'#05020a');R(153,67,2,3,'#c0b0e8');R(151,70,5,1,'#a090d0');
+ R(147,57,3,3,'#b8a8e8');R(157,57,3,3,'#b8a8e8');
+ // NEXT marco
+ R(135,90,28,1,'#ff3dc8');R(135,123,28,1,'#ff3dc8');R(135,90,1,34,'#ff3dc8');R(162,90,1,34,'#ff3dc8');
+ R(136,91,26,1,'#19d3ff');R(136,122,26,1,'#19d3ff');R(136,91,1,32,'#19d3ff');R(161,91,1,32,'#19d3ff');
+ // marco del video
+ R(30,68,104,1,'#ff3dc8');R(30,131,104,1,'#ff3dc8');R(30,68,1,64,'#ff3dc8');R(133,68,1,64,'#ff3dc8');
+ R(31,69,102,1,'#19d3ff');R(31,130,102,1,'#19d3ff');R(31,69,1,62,'#19d3ff');R(132,69,1,62,'#19d3ff');
+ R(29,67,106,1,'#7a3df0');R(29,132,106,1,'#7a3df0');R(29,67,1,66,'#7a3df0');R(134,67,1,66,'#7a3df0');
+ C=g;
+})();
+
+/* ============ PERSONAJES (recortes de la hoja) ============ */
+g.imageSmoothingEnabled=false;
+function spriteTo(x2,d,x,y,w,h){
+ if(!sheetOK)return;
+ let sx=d.sx,sy=d.sy,sw=d.sw,sh=d.sh;const ar=w/h;
+ if(sw/sh>ar){const nw=sh*ar;sx+=(sw-nw)/2;sw=nw}else{const nh=sw/ar;sy+=(sh-nh)*.1;sh=nh}
+ x2.imageSmoothingEnabled=false;
+ x2.drawImage(SHEET,sx,sy,sw,sh,Math.round(x),Math.round(y),Math.round(w),Math.round(h));
+}
+function portrait(d,x,y,w,h,pulse){
+ g.save();g.beginPath();g.rect(x,y,w,h);g.clip();
+ g.fillStyle='#0c0326';g.fillRect(x,y,w,h);
+ spriteTo(g,d,x,y,w,h);
+ if(pulse>.5){g.globalAlpha=.12;R(x,y,w,h,'#fff');g.globalAlpha=1}
+ g.restore();
+}
+function mainDJ(d,beat,ph,pulse){
+ const bob=ph<.5?0:1,sway=Math.sin(beat*Math.PI/2)*.045;
+ const k=1+.05*pulse,w=48*k,h=46*k,cx=82,cy=41+bob;
+ g.save();g.translate(cx,62);g.rotate(sway);g.translate(-cx,-62);
+ const x=cx-w/2,y=cy-h/2;
+ g.globalAlpha=.35;R(x-3,y-3,Math.round(w)+6,Math.round(h)+6,'#ff3dc8');g.globalAlpha=1;
+ R(x-2,y-2,Math.round(w)+4,Math.round(h)+4,'#ff3dc8');
+ R(x-1,y-1,Math.round(w)+2,Math.round(h)+2,'#19d3ff');
+ g.fillStyle='#0c0326';g.fillRect(Math.round(x),Math.round(y),Math.round(w),Math.round(h));
+ spriteTo(g,d,x,y,w,h);
+ if(pulse>.6)[[x-4,y-4],[x+w+2,y-4],[x-4,y+h-8],[x+w+2,y+h-8]].forEach(([a,b])=>{R(a,b+1,3,1,'#ffe45e');R(a+1,b,1,3,'#ffe45e')});
+ g.restore();
+}
+
+/* ============ ESTADO ============ */
+let cur=0,flip=0,bpm=124;
+const dj=()=>DUOS[cur][flip],partner=()=>DUOS[cur][1-flip],nextDJ=()=>DUOS[(cur+1)%DUOS.length][0];
+let glitchUntil=0;
+
+/* ============ ANIMACIÓN ============ */
+function floor(t,pulse){
+ const y0=52;
+ for(let y=y0;y<H;y++)R(0,y,W,1,mix('#2a0a5e','#0c0326',(y-y0)/(H-y0)));
+ const N=10,sc=(t*.5)%1;
+ for(let i=0;i<N;i++){const z=(i+sc)/N,y=y0+Math.round(z*z*(H-y0));R(0,y,W,1,pulse>.4?'#8ff3ff':'#19d3ff');}
+ for(let j=-12;j<=12;j++){const x1=82+j*22;for(let y=y0;y<H;y++){const k=(y-y0)/(H-y0);R(Math.round(82+(x1-82)*k),y,1,1,'#ff3dc8');}}
+}
+function platter(cx,cy,t,col){
+ for(let dy=-3;dy<=3;dy++){const hw=Math.round(Math.sqrt(1-dy*dy/10)*15);R(cx-hw,cy+dy,hw*2,1,dy===-3?'#555':'#1a1a24');}
+ for(let dy=-2;dy<=2;dy++){const hw=Math.round(Math.sqrt(1-dy*dy/6)*5);R(cx-hw,cy+dy,hw*2,1,col);}
+ const a=t*6,hx2=Math.round(Math.cos(a)*10),hy2=Math.round(Math.sin(a)*2);
+ R(cx+hx2,cy+hy2,2,1,'#fff');R(cx,cy,1,1,'#000');
+}
+function deck(t,pulse){
+ R(29,61,106,9,'#2a1470');R(29,61,106,1,'#ff3dc8');R(29,62,106,1,'#a070ff');R(29,69,106,1,'#14062e');
+ platter(46,64,t,'#ff3dc8');platter(118,64,-t,'#19d3ff');
+ R(66,60,32,9,'#14062e');R(66,60,32,1,'#19d3ff');
+ for(let i=0;i<6;i++){const fy=62+Math.round((Math.sin(t*3+i)*.5+.5)*3);R(69+i*5,62,1,5,'#444');R(68+i*5,fy,3,2,['#ffe45e','#ff3dc8','#19d3ff','#7aff7a','#ff9a3d','#a070ff'][i]);}
+ if(pulse>.3)R(66,60,32,1,'#fff');
+}
+function disco(t){
+ const cx=152,cy=45,r=8,rot=Math.floor(t*5);
+ R(152,30,1,6,'#a070ff');
+ for(let dy=-r;dy<=r;dy++){
+  const hw=Math.floor(Math.sqrt(r*r-dy*dy));
+  for(let dx=-hw;dx<=hw;dx++){
+   const lit=((dx+rot)%3+3)%3===0||((dy%3)+3)%3===0;
+   R(cx+dx,cy+dy,1,1,lit?'#d9c0ff':(dx+dy<-3?'#a070ff':'#6a3ac8'));
+  }
+ }
+ const r2=rng(Math.floor(t*6));
+ for(let i=0;i<6;i++){const sx=cx+Math.floor(r2()*26)-13,sy=cy+Math.floor(r2()*26)-13;R(sx,sy,1,1,'#fff');if(r2()>.6)R(sx-1,sy,3,1,'#fff8');}
+}
+function arcade(t,pulse){
+ for(let i=0;i<6;i++){
+  const hh=3+Math.round((Math.sin(t*7+i*1.7)*.5+.5)*(14+pulse*5));
+  R(7+i*3,84-hh,2,hh,['#ff3dc8','#ffe45e','#19d3ff','#7aff7a','#ff9a3d','#a070ff'][i]);
+ }
+ R(7,60,3,3,'#ffe45e');R(22,62,2,2,'#19d3ff');
+ const bl=Math.floor(t*2)%2;
+ R(14,103,4,1,bl?'#ffe45e':'#000');
+ [['#ff3d3d',16],['#ffe45e',19],['#19d3ff',22]].forEach(([c,x],i)=>R(x,91,2,2,(Math.floor(t*4)+i)%3===0?'#fff':c));
+}
+function frame(t){
+ g.globalAlpha=.7+.3*Math.sin(t*2.4);
+ R(0,0,W,1,'#ff3dc8');R(0,H-1,W,1,'#ff3dc8');R(0,0,1,H,'#ff3dc8');R(W-1,0,1,H,'#ff3dc8');
+ R(1,1,W-2,1,'#19d3ff');R(1,H-2,W-2,1,'#19d3ff');R(1,1,1,H-2,'#19d3ff');R(W-2,1,1,H-2,'#19d3ff');
+ g.globalAlpha=1;
+ [[0,0],[W-3,0],[0,H-3],[W-3,H-3]].forEach(([x,y])=>R(x,y,3,3,'#ffe45e'));
+}
+function eqBars(t,pulse){
+ for(let k=0;k<2;k++)for(let i=0;i<6;i++){
+  const x=k?132+i*3:19+i*3,hh=2+Math.round((Math.sin(t*8+i*1.3+k*2)*.5+.5)*(7+pulse*3));
+  for(let y=0;y<hh;y++)R(x,14-y,2,1,y>7?'#ff3d3d':y>4?'#ffe45e':(k?'#19d3ff':'#ff3dc8'));
+ }
+}
+function beams(t,pulse){
+ const sw=Math.sin(t*1.1)*8;
+ [[30,'#ff3dc8',-1],[134,'#19d3ff',1]].forEach(([ox,col,d])=>{
+  g.globalAlpha=.06+.05*pulse;
+  for(let y=17;y<62;y++){const k=(y-17)/45,cxm=ox+(82+sw*d-ox)*k,hw=1+k*9;R(cxm-hw,y,hw*2,1,col);}
+ });
+ g.globalAlpha=1;
+}
+const conf=[];let lastBeat=-1;
+function confetti(beat,pulse){
+ const b=Math.floor(beat);
+ if(b!==lastBeat){lastBeat=b;for(let i=0;i<5;i++)conf.push({x:34+Math.random()*96,y:18,vy:.5+Math.random()*.8,vx:(Math.random()-.5)*.6,c:['#ff3dc8','#ffe45e','#19d3ff','#7aff7a'][i%4]});}
+ for(let i=conf.length-1;i>=0;i--){const q=conf[i];q.y+=q.vy;q.x+=q.vx;R(q.x,q.y,2,2,q.c);if(q.y>66)conf.splice(i,1)}
+}
+let lastF=0,T0=performance.now();
+function draw(now){
+ requestAnimationFrame(draw);
+ if(now-lastF<33)return;lastF=now;
+ const t=(now-T0)/1000,beat=t*bpm/60,ph=beat%1,pulse=Math.max(0,1-ph*3.5);
+ C=g;
+ g.drawImage(bgBack,0,0);
+ floor(t,pulse);
+ g.drawImage(bgFront,0,0);
+ eqBars(t,pulse);
+ // portada izq.: compañero/a
+ portrait(partner(),3,22,22,26,pulse);
+ arcade(t,pulse);
+ disco(t);
+ // NEXT
+ portrait(nextDJ(),137,92,24,30,pulse);
+ // DJ principal
+ beams(t,pulse);
+ mainDJ(dj(),beat,ph,pulse);
+ confetti(beat,pulse);
+ deck(t,pulse);
+ // destello al ritmo sobre la cabina
+ if(pulse>.7){g.globalAlpha=.08;R(0,0,W,H,'#fff');g.globalAlpha=1;}
+ frame(t);
+ // glitch
+ if(now<glitchUntil){
+  const r=rng(Math.floor(now/60));
+  for(let i=0;i<8;i++){const y=Math.floor(r()*H),h=1+Math.floor(r()*6),dx=Math.floor((r()-.5)*24);
+   g.drawImage(cv,0,y,W,h,dx,y,W,h);}
+  g.globalAlpha=.5;R(0,Math.floor(r()*H),W,2,r()>.5?'#ff3dc8':'#19d3ff');g.globalAlpha=1;
+ }
+}
+requestAnimationFrame(draw);
+
+/* ============ DJ: UI y rotación ============ */
+const $=id=>document.getElementById(id);
+function setLabels(){
+ $('plN').textContent=dj().n;$('plQ').textContent=dj().q;
+ $('nextnm').textContent=nextDJ().n;
+ document.querySelectorAll('.duo').forEach((e,i)=>e.classList.toggle('on',i===cur*2+flip));
+}
+function goChar(i){
+ if(Math.floor(i/2)===cur){flip=i%2;setLabels();return}
+ goDuo(Math.floor(i/2));setTimeout(()=>{flip=i%2;setLabels()},700);
+}
+function goDuo(n,immediate){
+ n=((n%DUOS.length)+DUOS.length)%DUOS.length;
+ if(immediate){cur=n;flip=0;setLabels();return}
+ $('chalN').textContent=DUOS[n][0].n+' & '+DUOS[n][1].n;
+ $('chal').classList.add('on');glitchUntil=performance.now()+1500;
+ setTimeout(()=>{cur=n;flip=0;setLabels()},650);
+ setTimeout(()=>$('chal').classList.remove('on'),1500);
+ resetRot();
+}
+cv.addEventListener('click',e=>{
+ const b=cv.getBoundingClientRect(),x=(e.clientX-b.left)/b.width*W,y=(e.clientY-b.top)/b.height*H;
+ if(x>=2&&x<=26&&y>=20&&y<=50){flip=1-flip;setLabels();}
+});
+$('bNextD').onclick=()=>goDuo(cur+1);
+$('bRnd').onclick=()=>{let n;do{n=Math.floor(Math.random()*DUOS.length)}while(n===cur&&DUOS.length>1);goDuo(n)};
+$('bFull').onclick=()=>{const p=$('poster');document.fullscreenElement?document.exitFullscreen():(p.requestFullscreen&&p.requestFullscreen())};
+let rotTimer=null;
+function resetRot(){clearInterval(rotTimer);rotTimer=setInterval(()=>goDuo(cur+1),+$('rot').value)}
+$('rot').onchange=()=>{resetRot();save()};
+$('bpm').onchange=()=>{const v=parseInt($('bpm').value,10);bpm=Math.min(200,Math.max(60,v||124));$('bpm').value=bpm;save()};
+
+// roster: los 32 personajes
+const thumbs=[];
+CH.forEach((ch,i)=>{
+ const c=document.createElement('canvas');c.width=48;c.height=48;
+ const el=document.createElement('div');el.className='duo';
+ el.appendChild(c);el.append(ch.n);
+ el.title=ch.q;el.onclick=()=>goChar(i);$('duos').appendChild(el);thumbs.push(c);
+});
+function buildThumbs(){
+ thumbs.forEach((c,i)=>{const x=c.getContext('2d');x.fillStyle='#0c0326';x.fillRect(0,0,48,48);spriteTo(x,CH[i],0,0,48,48);});
+}
+if(sheetOK)buildThumbs();
+
+/* ============ PLAYLIST + YOUTUBE ============ */
+let vids=[],idx=0,player=null,ytReady=false,started=false,errs=0;
+function save(){try{localStorage.setItem('arcadedj.v2',JSON.stringify({vids,rot:$('rot').value,shuf:$('shuf').checked,bpm}))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem('arcadedj.v2')||'null');if(s){vids=s.vids||[];$('rot').value=s.rot||'600000';$('shuf').checked=!!s.shuf;bpm=s.bpm||124;$('bpm').value=bpm}}catch(e){}}
+function parseId(s){s=(s||'').trim();if(/^[\w-]{11}$/.test(s))return s;const m=s.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([\w-]{11})/);return m?m[1]:null}
+async function fetchTitle(v){try{const r=await fetch('https://noembed.com/embed?url='+encodeURIComponent('https://www.youtube.com/watch?v='+v.id));const j=await r.json();if(j.title){v.title=j.title;save();renderList();}}catch(e){}}
+function addVideo(s){const id=parseId(s);if(!id)return false;if(vids.some(v=>v.id===id))return true;const v={id,title:id};vids.push(v);fetchTitle(v);return true}
+function renderList(){
+ $('count').textContent=vids.length+(vids.length===1?' video en la lista':' videos en la lista');
+ const ul=$('list');ul.innerHTML='';
+ vids.forEach((v,i)=>{
+  const li=document.createElement('li');if(started&&i===idx)li.className='cur';
+  const t=document.createElement('span');t.className='t';t.textContent=(i+1)+'. '+v.title;t.onclick=()=>{idx=i;playIdx()};
+  const up=document.createElement('button');up.textContent='↑';up.onclick=()=>{if(i>0){[vids[i-1],vids[i]]=[vids[i],vids[i-1]];if(idx===i)idx--;else if(idx===i-1)idx++;save();renderList()}};
+  const dn=document.createElement('button');dn.textContent='↓';dn.onclick=()=>{if(i<vids.length-1){[vids[i+1],vids[i]]=[vids[i],vids[i+1]];if(idx===i)idx++;else if(idx===i+1)idx--;save();renderList()}};
+  const x=document.createElement('button');x.textContent='✕';x.onclick=()=>{vids.splice(i,1);if(idx>i)idx--;save();renderList()};
+  li.append(t,up,dn,x);ul.appendChild(li);
+ });
+}
+$('bAdd').onclick=()=>{if(addVideo($('url').value)){$('url').value='';save();renderList()}else alert('No reconocí ese enlace de YouTube.')};
+$('url').addEventListener('keydown',e=>{if(e.key==='Enter')$('bAdd').click()});
+$('bBulk').onclick=()=>{$('bulk').value.split(/\s+/).filter(Boolean).forEach(addVideo);$('bulk').value='';save();renderList()};
+$('bClear').onclick=()=>{if(confirm('¿Vaciar la lista?')){vids=[];idx=0;save();renderList()}};
+$('shuf').onchange=save;
+
+// API de YouTube
+const tag=document.createElement('script');tag.src='https://www.youtube.com/iframe_api';document.head.appendChild(tag);
+window.onYouTubeIframeAPIReady=()=>{
+ player=new YT.Player('player',{width:'100%',height:'100%',playerVars:{playsinline:1,rel:0,modestbranding:1,autoplay:1},
+  events:{onReady:()=>{ytReady=true},onStateChange:onState,onError:onErr}});
+};
+function setNP(t){$('npT').textContent='NOW PLAYING ▶ '+t}
+function onState(e){
+ if(e.data===YT.PlayerState.PLAYING){errs=0;try{const t=player.getVideoData().title;if(t){setNP(t);if(vids[idx])vids[idx].title=t;renderList()}}catch(_){}}
+ if(e.data===YT.PlayerState.ENDED)nextVideo();
+}
+const ERR={2:'enlace inválido',5:'error del reproductor HTML5',100:'video no encontrado o privado',101:'el dueño no permite incrustarlo',150:'el dueño no permite incrustarlo',153:'falta referer (abrilo desde https://, no desde un archivo)'};
+let wd=null;
+function onErr(e){errs++;const c=e&&e.data,m=ERR[c]||('código '+c);
+ if(errs>=vids.length){setNP('No se pudo reproducir ningún video ('+m+')');return}
+ setNP('Salteado: '+m);setTimeout(nextVideo,1500)}
+function watchdog(){clearTimeout(wd);wd=setTimeout(()=>{try{const st=player.getPlayerState();if(st!==1&&st!==3){setNP('Tocá ▶ en el video para iniciar (el navegador bloqueó el autoplay)');player.playVideo()}}catch(_){}},4000)}
+function playIdx(){
+ if(!ytReady||!vids.length)return;
+ idx=((idx%vids.length)+vids.length)%vids.length;
+ player.loadVideoById(vids[idx].id);setNP(vids[idx].title);renderList();watchdog();
+}
+function nextVideo(){idx++;playIdx()}
+function startParty(){
+ if(!vids.length){$('startMsg').textContent='⚠ Primero cargá al menos un video en la lista de abajo.';return}
+ if(!ytReady){$('startMsg').textContent='Cargando reproductor de YouTube… probá de nuevo en un segundo.';return}
+ if($('shuf').checked&&!started)vids.sort(()=>Math.random()-.5);
+ started=true;errs=0;idx=0;$('start').style.display='none';playIdx();
+}
+$('btnStart').onclick=startParty;
+$('bPlay').onclick=()=>{if(!started)startParty();else{$('start').style.display='none';playIdx()}};
+$('bNextV').onclick=()=>{if(!started)startParty();else nextVideo()};
+document.addEventListener('keydown',e=>{if(e.target.matches('input,textarea,select'))return;
+ if(e.key==='ArrowRight')$('bNextD').click();if(e.key==='n'||e.key==='N')$('bNextV').click();if(e.key==='f'||e.key==='F')$('bFull').click();});
+
+load();renderList();setLabels();resetRot();
+</script>
+</body>
+</html>
